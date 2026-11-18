@@ -1,0 +1,18 @@
+{
+  "name": "christmas-room",
+  "version": "1.0.0",
+  "private": true,
+  "description": "圣诞树之夜 —— 多人圣诞房间网页游戏（注册登录 / 巨型圣诞树 / 心愿任务 / 聊天 / 装扮 / 投掷 / 骑乘 / 互殴）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "PORT=3000 node server.js"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.1",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
