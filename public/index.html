@@ -944,7 +944,7 @@
       }
       case 'state': {
         if (m.players) {
-          // 平滑：以旧位置为起点，逐帧插值到新位置
+          // 平滑：以旧位置为起点，逐帧插值到新位置（不外推，避免回弹）
           const prev = new Map(S.players.map(q => [q.id, q]));
           m.players.forEach(p => {
             const q = prev.get(p.id);
@@ -964,11 +964,15 @@
           S.tasks = me.tasks || S.tasks;
           if (me.dead && !wasGhost) { S.ghostMode = true; showDeath(); $('#deathOverlay').classList.add('on'); }
           if (!me.dead && wasGhost) { S.ghostMode = false; $('#deathOverlay').classList.remove('on'); toast('你又爬起来了'); }
-          // 位置校正：偏差过大才拉回，避免抖动
+          // 位置校正：本地先预测，服务器只做缓慢纠偏，偏差很大才瞬移
           if (!me.riding) {
             const d = dist(S.me.x, S.me.y, me.x, me.y);
-            if (d > 90) { S.me.x = me.x; S.me.y = me.y; }
-            else { S.me.x = lerp(S.me.x, me.x, 0.4); S.me.y = lerp(S.me.y, me.y, 0.4); }
+            if (d > 140) { S.me.x = me.x; S.me.y = me.y; }
+            else if (d > 5) {
+              const k = 0.07;
+              S.me.x += (me.x - S.me.x) * k;
+              S.me.y += (me.y - S.me.y) * k;
+            }
           }
         }
         updateHud();
@@ -1655,7 +1659,7 @@
     S.cam.y = lerp(S.cam.y, targetY, 0.14);
 
     // 网络节流
-    if (now - lastSend > 90) { lastSend = now; sendInput(); }
+    if (now - lastSend > 55) { lastSend = now; sendInput(); }
 
     drawScene(now, dt, zoom, vw, vh);
     updateHints(now);
@@ -1711,7 +1715,7 @@
     });
 
     // 玩家（先插值再画，避免 110ms 一次的位置跳动）
-    const kLerp = clamp(dt * 12, 0, 1);
+    const kLerp = clamp(dt * 18, 0, 1);
     S.players.forEach(p => {
       if (p.id === S.meId) return;         // 自己最后画
       if (p.tx !== undefined) {
