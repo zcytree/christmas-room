@@ -403,7 +403,7 @@ let lastItemsRev = -1;
 let bcTick = 0;
 function broadcastState() {
   const now = Date.now();
-  if (now - lastBroadcast < 110) return;
+  if (now - lastBroadcast < 65) return;
   lastBroadcast = now;
   const itemsChanged = itemsRev !== lastItemsRev;
   lastItemsRev = itemsRev;
@@ -843,3 +843,4 @@ setInterval(() => {
 }, 60000);
 
 server.listen(PORT, () => console.log('halloween-room listening on ' + PORT));
+//（注：内容由AI生成）
