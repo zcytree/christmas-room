@@ -188,6 +188,13 @@
   @media (max-width:820px){
     .auth-right{padding:24px 20px}
   }
+
+  /* 移动端适配：避免 iOS 聚焦缩放、输入框过小 */
+  @media (max-width:900px){
+    .field input{font-size:16px}
+    #auth{padding:14px}
+    #keys{display:none}
+  }
 </style>
 </head>
 <body>
@@ -1961,6 +1968,15 @@
     AudioFX.throw();
   }
 
+  function throwAim() {
+    if (S.me.dead) return;
+    if (!S.me.held) { toast('手上没有东西，先去地上捡一个'); return; }
+    const w = S.aim ? { x: S.aim.x, y: S.aim.y } : { x: S.me.x + S.me.dir * 220, y: S.me.y };
+    wsSend({ t: 'throw', x: Math.round(w.x), y: Math.round(w.y) });
+    S.me.held = null;
+    AudioFX.throw();
+  }
+
   function attack() {
     if (S.me.dead) return;
     wsSend({ t: 'attack' });
@@ -2055,26 +2071,50 @@
     if (!('ontouchstart' in window) && !navigator.maxTouchPoints) return;
     const style = document.createElement('style');
     style.textContent = `
-      #tjoy{position:absolute;left:20px;bottom:22px;width:112px;height:112px;border-radius:50%;
-        background:rgba(30,16,48,.55);border:1px solid rgba(255,150,60,.3);touch-action:none;display:none}
-      #tjoyKnob{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
+      #tjoy{position:absolute;left:18px;bottom:34px;width:124px;height:124px;border-radius:50%;z-index:30;
+        background:rgba(30,16,48,.62);border:1px solid rgba(255,150,60,.45);touch-action:none;display:block}
+      #tjoyKnob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;
         background:radial-gradient(circle at 35% 30%,#ffd08a,#e07a12);box-shadow:0 0 18px rgba(255,140,40,.5)}
-      #tbtns{position:absolute;right:16px;bottom:22px;display:flex;flex-direction:column;gap:8px;touch-action:none}
-      .tbtn{width:64px;height:44px;border-radius:12px;border:1px solid rgba(255,150,60,.35);background:rgba(30,16,48,.75);
-        color:#ffe3bd;font-size:12px;font-weight:700;letter-spacing:.1em}
-      @media (max-width:820px){#tjoy{display:block}#tbtns{display:flex}}
+      #tbtns{position:absolute;right:12px;bottom:30px;display:grid;grid-template-columns:repeat(2,64px);gap:8px;touch-action:none;z-index:30}
+      .tbtn{width:64px;height:42px;border-radius:11px;border:1px solid rgba(255,150,60,.4);background:rgba(30,16,48,.82);
+        color:#ffe3bd;font-size:12.5px;font-weight:700;letter-spacing:.06em}
+      .tbtn:active{background:rgba(255,150,60,.35)}
+      #tkeys{position:absolute;left:50%;transform:translateX(-50%);bottom:56px;font-size:10px;color:#a99bbd;
+        background:rgba(20,11,32,.7);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:3px 9px;z-index:29;white-space:nowrap}
+      /* 触屏布局重排：聊天/任务卡移到上方，底部中间留给摇杆和按钮 */
+      #meCard{min-width:0;padding:7px 9px;font-size:11px}
+      #taskCard{left:12px;top:84px;bottom:auto;width:min(198px,50vw);padding:9px 10px}
+      #chatBox{right:12px;top:84px;bottom:auto;width:min(214px,52vw);padding:6px 8px}
+      #chatLog{height:64px}
+      #hintBar{bottom:16px;font-size:11px;max-width:86vw;white-space:normal;text-align:center}
+      @media (max-width:520px){
+        #chatLog{display:none}
+        #chatBox{width:min(174px,44vw);top:78px}
+        #taskCard{width:min(158px,42vw);top:78px}
+        #meCard{font-size:10.5px}
+        #tkeys{font-size:9px;padding:2px 7px}
+      }
     `;
     document.head.appendChild(style);
     const joy = document.createElement('div'); joy.id = 'tjoy';
     const knob = document.createElement('div'); knob.id = 'tjoyKnob';
     joy.appendChild(knob);
     const btns = document.createElement('div'); btns.id = 'tbtns';
-    [['捡', interact], ['打', attack], ['骑', ride], ['喝', drink]].forEach(([label, fn]) => {
+    [['捡', interact], ['打', attack], ['骑', ride], ['喝', drink],
+     ['戴帽', () => wearSlot('hat')], ['戴面', () => wearSlot('mask')],
+     ['戴披', () => wearSlot('cape')], ['跳', () => emote('dance')],
+     ['丢', throwAim], ['聊', () => chatInput.focus()]].forEach(([label, fn]) => {
       const b = document.createElement('button'); b.className = 'tbtn'; b.textContent = label;
       b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
       btns.appendChild(b);
     });
     $('#game').appendChild(joy); $('#game').appendChild(btns);
+
+    // 触屏设备：隐藏键盘提示，换成触屏说明
+    const kbKeys = $('#keys'); if (kbKeys) kbKeys.classList.add('off');
+    const tk = document.createElement('div'); tk.id = 'tkeys';
+    tk.textContent = '左侧摇杆走 · 点画面挥拳 / 投掷 · 右下按钮互动';
+    $('#game').appendChild(tk);
 
     let active = false, base = { x: 0, y: 0 }, pid = null;
     joy.addEventListener('pointerdown', (e) => {
